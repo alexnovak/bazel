@@ -21,6 +21,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.build.lib.actions.ActionEnvironment;
 import com.google.devtools.build.lib.actions.Artifact;
+import com.google.devtools.build.lib.actions.ArtifactRoot;
 import com.google.devtools.build.lib.actions.CommandLine;
 import com.google.devtools.build.lib.actions.RunfilesSupplier;
 import com.google.devtools.build.lib.analysis.SourceManifestAction.ManifestType;
@@ -92,6 +93,10 @@ public final class RunfilesSupport implements RunfilesSupplier {
   private final boolean buildRunfileLinks;
   private final CommandLine args;
   private final ActionEnvironment actionEnvironment;
+  private final boolean isSiblingRepositoryLayout;
+  private final PathFragment packageDirectory;
+  private final String name;
+  private final ArtifactRoot binDir;
 
   /**
    * Creates the RunfilesSupport helper with the given executable and runfiles.
@@ -111,6 +116,10 @@ public final class RunfilesSupport implements RunfilesSupplier {
         ruleContext.getConfiguration().getRunfileSymlinksMode();
     boolean buildRunfileManifests = ruleContext.getConfiguration().buildRunfileManifests();
     boolean buildRunfileLinks = ruleContext.getConfiguration().buildRunfileLinks();
+    PathFragment packageDirectory = ruleContext.getPackageDirectory();
+    String name = ruleContext.getLabel().getName();
+    boolean isSiblingRepositoryLayout = ruleContext.getConfiguration().isSiblingRepositoryLayout();
+    ArtifactRoot binDir = ruleContext.getBinDirectory();
 
     // Adding run_under target to the runfiles manifest so it would become part
     // of runfiles tree and would be executable everywhere.
@@ -129,12 +138,12 @@ public final class RunfilesSupport implements RunfilesSupplier {
     }
     Preconditions.checkState(!runfiles.isEmpty());
 
-    Artifact repoMappingManifest =
-        createRepoMappingManifestAction(ruleContext, runfiles, owningExecutable);
 
     Artifact runfilesInputManifest;
     Artifact runfilesManifest;
+    Artifact repoMappingManifest;
     if (buildRunfileManifests) {
+      repoMappingManifest = createRepoMappingManifestAction(ruleContext, runfiles, owningExecutable);
       runfilesInputManifest = createRunfilesInputManifestArtifact(ruleContext, owningExecutable);
       runfilesManifest =
           createRunfilesAction(
@@ -142,6 +151,7 @@ public final class RunfilesSupport implements RunfilesSupplier {
     } else {
       runfilesInputManifest = null;
       runfilesManifest = null;
+      repoMappingManifest = null;
     }
     Artifact runfilesMiddleman =
         createRunfilesMiddleman(
@@ -157,7 +167,11 @@ public final class RunfilesSupport implements RunfilesSupplier {
         runfileSymlinksMode,
         buildRunfileLinks,
         args,
-        actionEnvironment);
+        isSiblingRepositoryLayout,
+        actionEnvironment,
+        packageDirectory,
+        name,
+        binDir);
   }
 
   private RunfilesSupport(
@@ -170,7 +184,12 @@ public final class RunfilesSupport implements RunfilesSupplier {
       RunfileSymlinksMode runfileSymlinksMode,
       boolean buildRunfileLinks,
       CommandLine args,
-      ActionEnvironment actionEnvironment) {
+      boolean isSiblingRepositoryLayout,
+      ActionEnvironment actionEnvironment,
+      PathFragment packageDirectory,
+      String name,
+      ArtifactRoot binDir
+      ) {
     this.runfiles = runfiles;
     this.runfilesInputManifest = runfilesInputManifest;
     this.runfilesManifest = runfilesManifest;
@@ -180,7 +199,11 @@ public final class RunfilesSupport implements RunfilesSupplier {
     this.runfileSymlinksMode = runfileSymlinksMode;
     this.buildRunfileLinks = buildRunfileLinks;
     this.args = args;
+    this.isSiblingRepositoryLayout = isSiblingRepositoryLayout;
     this.actionEnvironment = actionEnvironment;
+    this.packageDirectory = packageDirectory;
+    this.name = name;
+    this.binDir = binDir;
   }
 
   /** Returns the executable owning this RunfilesSupport. Only use from Starlark. */
@@ -304,6 +327,18 @@ public final class RunfilesSupport implements RunfilesSupplier {
       return null;
     }
     return FileSystemUtils.replaceExtension(runfilesInputManifest.getPath(), RUNFILES_DIR_EXT);
+  }
+
+  /** Returns the root directory of the runfiles symlink farm; otherwise, returns null. */
+  @Nullable
+  public Path getVirtualRunfilesDirectory() {
+    PathFragment relativePath =
+        (owningExecutable != null)
+            ? owningExecutable.getOutputDirRelativePath(isSiblingRepositoryLayout)
+            : packageDirectory.getRelative(name);
+    String basename = relativePath.getBaseName();
+    PathFragment inputManifestPath = relativePath.replaceName(basename + RUNFILES_DIR_EXT);
+    return binDir.getRoot().getRelative(inputManifestPath);
   }
 
   /**

@@ -75,7 +75,7 @@ public final class TestTargetExecutionSettings {
     this.testRunnerFailFast = testConfig.getTestRunnerFailFast();
     this.executable = executable;
     this.runfilesSymlinksCreated = runfilesSupport.isBuildRunfileLinks();
-    this.runfilesDir = runfilesSupport.getRunfilesDirectory();
+    this.runfilesDir = runfilesSupport.getVirtualRunfilesDirectory();
     this.runfiles = runfilesSupport.getRunfiles();
     this.runfilesInputManifest = runfilesSupport.getRunfilesInputManifest();
     this.instrumentedFileManifest = instrumentedFileManifest;
