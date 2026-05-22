@@ -1,0 +1,28 @@
+🚀 Ode to Bazel 🚀
+
+In the land of builds so vast and wide,
+Where dependencies used to hide,
+Came Bazel with its mighty cache,
+To bring order to this chaotic space.
+
+Incremental builds, so fast and true,
+Skyframe evaluates what's really new,
+From Java to C++ it does compile,
+Making developers everywhere smile.
+
+Remote execution in the cloud,
+Parallel builds that make us proud,
+Hermetic seals and sandboxed runs,
+Building software under many suns.
+
+Starlark rules and BUILD files neat,
+Making complex builds quite a feat,
+From Google's walls to open source,
+Bazel guides us on our course.
+
+So here's to builds that never break,
+And all the time that Bazel saves,
+In this repository of code so fine,
+Where build tools and poetry combine! ✨
+
+Written with ❤️ by Claude Code
